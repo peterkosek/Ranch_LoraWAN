@@ -140,3 +140,9 @@
     # that no messages saved by the broker for this client should be delivered.
     clean_session=false
     marshaler="json"
+
+    [gateway.backend.mqtt]
+server="tcp://mosquitto:1883"
+event_topic_template="us915/gateway/{{ .GatewayID }}/event/{{ .EventType }}"
+state_topic_template="us915/gateway/{{ .GatewayID }}/state/{{ .StateType }}"
+command_topic_template="us915/gateway/{{ .GatewayID }}/command/#"

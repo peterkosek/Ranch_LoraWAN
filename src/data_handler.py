@@ -178,72 +178,7 @@ def start_mqtt():
     client.connect("mosquitto", 1883, 60)
     client.loop_start()
 
-# Assuming the constant MAX_DATA_AVAILABLE (in hours) is defined somewhere in your settings
-MAX_DATA_AVAILABLE = 336  # Example: maximum 14 days of data (14 * 24 hours)
-
-def fetch_graph_data(columns, range, limit=1):  # range will specify the number of days to fetch
-    try:
-        conn = mysql.connector.connect(**MYSQL_CONFIG)
-        cursor = conn.cursor()
-
-        graph_data = []
-        for column, label in columns:
-            # Adjust limit for the number of records based on the range (days)
-            records_to_fetch = range * 24  # For each day, there should be 24 records (1 per hour)
-
-            # Ensure that we do not fetch more records than what is available in the database
-            if records_to_fetch > MAX_DATA_AVAILABLE:
-                records_to_fetch = MAX_DATA_AVAILABLE  # Limit to the maximum available range
-
-            # Modify the query to fetch data based on the range (last 'range' days)
-            query = f"""
-                SELECT timestamp, {column} 
-                FROM s1000_data 
-                WHERE timestamp >= NOW() - INTERVAL {records_to_fetch} HOUR
-                ORDER BY timestamp DESC
-                LIMIT %s
-            """
-
-            print(f"Executing query: {query} with limit {records_to_fetch}")  # Debugging query
-
-            cursor.execute(query, (records_to_fetch,))
-            rows = cursor.fetchall()
-
-            # Log fetched rows for debugging
-            print(f"Fetched rows for {column}: {rows}")
-
-            # If no rows are found, continue to the next column
-            if not rows:
-                print(f"No data available for column {column}")
-                continue  # Skip to next column
-
-            # Reverse rows to ensure chronological order
-            rows = rows[::-1]
-
-            # Add 8 hours to each timestamp (if needed) and format as string
-            labels = [r[0] + timedelta(hours=8) for r in rows]  # Add 8 hours to the timestamp
-            values = [r[1] for r in rows]
-
-            # Filter out zero values (or replace with None)
-            filtered_values = [v if v != 0 else None for v in values]
-
-            graph_data.append({
-                'label': label,
-                'labels': labels,
-                'values': filtered_values,
-                'last': filtered_values[-1] if filtered_values else None  # Store the last value
-            })
-
-        # Return the graph data if any data was collected, else return an empty list
-        if not graph_data:
-            print(f"No valid data collected for the requested range.")
-            return []
-
-        return graph_data
-
-    except mysql.connector.Error as err:
-        print(f"Error fetching graph data: {err}")
-        return []
-    finally:
-        if conn:
-            conn.close()
+if __name__ == "__main__":
+    mqtt_thread()
+    while True:
+        pass  # Keep main thread alive
