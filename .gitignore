@@ -5,3 +5,7 @@
 # data folder
 /data
 /lorawan-devices
+
+# Python cache
+__pycache__/
+*.pyc
