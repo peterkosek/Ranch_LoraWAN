@@ -7,9 +7,10 @@ username=""
 password=""
 
 [integration.mqtt]
-event_topic_template="us915_1/gateway/{{ .GatewayID }}/event/{{ .EventType }}"
-state_topic_template="us915_1/gateway/{{ .GatewayID }}/state/{{ .StateType }}"
-command_topic_template="us915_1/gateway/{{ .GatewayID }}/command/#"
+event_topic_template="us915/gateway/{{ .GatewayID }}/event/{{ .EventType }}"
+state_topic_template="us915/gateway/{{ .GatewayID }}/state/{{ .StateType }}"
+command_topic_template="us915/gateway/{{ .GatewayID }}/command/#"
+marshaler = "json"
 
 [backend]
 type="basic_station"
@@ -21,7 +22,7 @@ type="basic_station"
   ca_cert=""
 
   region="US915"
-  frequency_min=923000000
+  frequency_min=903000000
   frequency_max=928000000
 
 
