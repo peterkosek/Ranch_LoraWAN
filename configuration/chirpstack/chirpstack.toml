@@ -97,7 +97,7 @@
   marshaler="json"
   json=true
 
-  [application_server.integations]
+  [application_server.integrations]
     marshaller="json"
     json=true
 

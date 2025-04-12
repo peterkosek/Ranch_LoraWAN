@@ -118,20 +118,22 @@ def on_connect(client, userdata, flags, rc):
     sys.stdout.flush()
 
 def on_message(client, userdata, msg):
-    # Split the topic and extract the devEui
     topic_parts = msg.topic.split('/')
     dev_eui = topic_parts[topic_parts.index("device") + 1] if "device" in topic_parts else None
 
-    # Decode the payload to string if it's a bytes-like object
     try:
         payload_str = msg.payload.decode('utf-8')
-        payload_data = json.loads(payload_str)  # Convert the string to a dictionary
+        payload_data = json.loads(payload_str)
+        print("MQTT topic received:", msg.topic)
+        print("Payload:", payload_str)
     except UnicodeDecodeError as e:
-        # print(f"Error decoding message payload: {e}")
+        print("Unicode decode error:", e)
         return
     except json.JSONDecodeError as e:
-        # print(f"Error decoding JSON from payload: {e}")
+        print("JSON decode error:", e)
         return
+
+
 
     # Now, you can check for "phyPayload" in the decoded dictionary
     if "phyPayload" in payload_data:
