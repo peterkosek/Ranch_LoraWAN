@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Wind</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; }
+    nav {
+      background: #f8f8f8;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    nav a {
+      margin-right: 1rem;
+      text-decoration: none;
+      font-weight: bold;
+      color: #444;
+    }
+    .chart-container { max-width: 900px; margin: 2rem auto; }
+    .slider-container { margin: 2rem auto; text-align: center; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/environmental-page">Environmental</a>
+    <a href="/air-quality-page">Air Quality</a>
+    <a href="/wind-page">Wind</a>
+    <a href="/rain-page">Rain</a>
+  </nav>
+
+  <div class="slider-container">
+    Show last 
+    <input type="range" id="sharedWindow" min="1" max="240" value="100">
+    <span id="sharedWindowLabel">100</span> hours
+  </div>
+
+  <div class="chart-container">
+    <h2>Wind Speed (mph)</h2>
+    <canvas id="windSpeedChart" height="120"></canvas>
+
+    <h2>Wind Direction (°)</h2>
+    <canvas id="windDirChart" height="120"></canvas>
+  </div>
+
+  <script>
+    const windSpeedChart = document.getElementById('windSpeedChart').getContext('2d');
+    const windDirChart = document.getElementById('windDirChart').getContext('2d');
+
+    fetch('/api/wind')
+      .then(r => r.json())
+      .then(data => {
+        const chartData = {
+          windSpeed: {},
+          windDir: {}
+        };
+
+        const seriesMap = {
+          'MinWindSp': 'windSpeed',
+          'AvgWindSp': 'windSpeed',
+          'MaxWindSp': 'windSpeed',
+          'MinWindDir': 'windDir',
+          'AvgWindDir': 'windDir',
+          'MaxWindDir': 'windDir'
+        };
+
+        const datasets = {
+          windSpeed: [],
+          windDir: []
+        };
+
+        let labels = [];
+
+        data.forEach(item => {
+          const target = seriesMap[item.label.replace(/\s+/g, '')];
+          const color = {
+            'MinWindSp': 'blue',
+            'AvgWindSp': 'green',
+            'MaxWindSp': 'red',
+            'MinWindDir': 'blue',
+            'AvgWindDir': 'green',
+            'MaxWindDir': 'red'
+          }[item.label.replace(/\s+/g, '')] || 'gray';
+
+          const reversedLabels = item.data.labels.map(l => {
+            const d = new Date(l);
+            return d.toLocaleString('en-US', {
+              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+          }).reverse();
+
+          const values = item.data.values.reverse();
+
+          if (labels.length === 0) labels = reversedLabels;
+
+          datasets[target].push({
+            label: item.label,
+            data: values,
+            borderColor: color,
+            borderWidth: 2,
+            fill: false,
+            tension: 0.1
+          });
+        });
+
+        const speedChart = new Chart(windSpeedChart, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: datasets.windSpeed
+          },
+          options: {
+            responsive: true,
+            scales: {
+              x: {
+                title: { display: true, text: 'Time' },
+                ticks: { autoSkip: true, maxTicksLimit: 100 }
+              },
+              y: {
+                title: { display: true, text: 'mph' }
+              }
+            }
+          }
+        });
+
+                const dirChart = new Chart(windDirChart, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: datasets.windDir
+          },
+          options: {
+            responsive: true,
+            scales: {
+              x: {
+                title: { display: true, text: 'Time' },
+                ticks: { autoSkip: true, maxTicksLimit: 100 }
+              },
+              y: {
+                title: { display: true, text: '°' },
+                min: 0,
+                max: 360,
+                ticks: {
+                  stepSize: 90,
+                  callback: function(value) {
+                    const dirs = { 0: 'North', 90: 'East', 180: 'South', 270: 'West' };
+                    return dirs[value] || value;
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        const slider = document.getElementById('sharedWindow');
+        const label = document.getElementById('sharedWindowLabel');
+
+        slider.addEventListener('input', () => {
+          const count = parseInt(slider.value);
+          label.textContent = count;
+
+          speedChart.data.labels = labels.slice(-count);
+          speedChart.data.datasets.forEach((d, i) => {
+            d.data = datasets.windSpeed[i].data.slice(-count);
+          });
+          speedChart.update();
+
+          dirChart.data.labels = labels.slice(-count);
+          dirChart.data.datasets.forEach((d, i) => {
+            d.data = datasets.windDir[i].data.slice(-count);
+          });
+          dirChart.update();
+        });
+      });
+  </script>
+</body>
+</html>

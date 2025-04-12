@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+</head>
+<body>
+    <h2>{{ title }}</h2>
+
+    <!-- Slider for changing the range -->
+    <label for="timeRangeSlider">Select Time Range (days):</label>
+    <input type="range" id="timeRangeSlider" min="1" max="14" value="1" step="1" />
+    <span id="sliderValue">1 day</span>
+
+    <div id="graphs">
+        <!-- This section will dynamically update with the graphs -->
+    </div>
+
+    <script>
+        const slider = document.getElementById('timeRangeSlider');
+        const sliderValue = document.getElementById('sliderValue');
+
+        // Update the displayed value of the slider
+        slider.addEventListener('input', function() {
+            sliderValue.textContent = slider.value + ' day' + (slider.value > 1 ? 's' : '');
+        });
+
+        // Fetch the new data when slider is released
+        slider.addEventListener('change', function() {
+            const timeRange = slider.value;
+            fetch(`/temp-humid-rain?range=${timeRange}`)
+                .then(response => response.json())
+                .then(data => updateGraphs(data));
+        });
+
+        // Function to update the graphs based on slider value
+        function updateGraphs(graphData) {
+            // Step 1: Check if graphData is valid and not empty
+            if (!graphData || !Array.isArray(graphData) || graphData.length === 0) {
+                console.error("Invalid or empty graph data.");
+                return;
+            }
+        
+            // Step 2: Clear old graphs (remove all canvas elements)
+            const graphContainer = document.getElementById('graphs');
+            graphContainer.innerHTML = ''; // Clear the container before adding new charts
+        
+            // Step 3: Render new graphs (once valid data is received)
+            graphData.forEach((graph, i) => {
+                const canvasContainer = document.createElement('div');
+                canvasContainer.classList.add('canvas-container');
+        
+                // Create a new canvas element for each graph
+                const canvas = document.createElement('canvas');
+                canvas.id = `chart_${i}`;
+                canvas.width = 300;
+                canvas.height = 200;
+                canvasContainer.appendChild(canvas);
+        
+                // Add the container to the graph container
+                graphContainer.appendChild(canvasContainer);
+        
+                // Initialize Chart.js with the new data
+                const ctx = canvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: graph.labels,  // Set the new x-axis labels (timestamps)
+                        datasets: [{
+                            label: graph.label,
+                            data: graph.values,  // Set the new data points
+                            borderColor: 'blue',
+                            tension: 0.3,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: false
+                            },
+                            x: {
+                                type: 'category',  // Use 'category' for formatted date strings
+                                title: {
+                                    display: true,
+                                    text: 'Time'
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+                
+        // Initial graph render (with the initial set of data)
+        updateGraphs({{ graphs | tojson }});
+    </script>
+
+</body>
+</html>

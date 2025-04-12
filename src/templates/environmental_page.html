@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Environmental Data</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; }
+    nav {
+      background: #f8f8f8;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    nav a {
+      margin-right: 1rem;
+      text-decoration: none;
+      font-weight: bold;
+      color: #444;
+    }
+    .chart-container { max-width: 900px; margin: 2rem auto; }
+    .slider-container { margin: 2rem auto; text-align: center; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/environmental-page">Environmental</a>
+    <a href="/air-quality-page">Air Quality</a>
+    <a href="/wind-page">Wind</a>
+    <a href="/rain-page">Rain</a>
+  </nav>
+
+  <div class="slider-container">
+    Show last 
+    <input type="range" id="sharedWindow" min="1" max="240" value="100">
+    <span id="sharedWindowLabel">100</span> hours
+  </div>
+
+  <div class="chart-container">
+    <h2>Temperature: <span id="temperatureValue"></span></h2>
+    <canvas id="temperatureChart" height="120"></canvas>
+
+    <h2>Humidity: <span id="humidityValue"></span></h2>
+    <canvas id="humidityChart" height="120"></canvas>
+
+    <h2>Pressure: <span id="pressureValue"></span></h2>
+    <canvas id="pressureChart" height="120"></canvas>
+
+    <h2>Light: <span id="lightluxValue"></span></h2>
+    <canvas id="lightluxChart" height="120"></canvas>
+  </div>
+
+  <script>
+    const charts = {};
+    const chartData = {};
+
+    fetch('/api/environmental')
+      .then(r => r.json())
+      .then(data => {
+        data.forEach(item => {
+          const baseId = item.label.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const canvasId = baseId + 'Chart';
+          const ctx = document.getElementById(canvasId)?.getContext('2d');
+          if (!ctx) {
+            console.warn("Missing canvas for:", canvasId);
+            return;
+          }
+
+          const labels = item.data.labels.map(l => {
+            const d = new Date(l);
+            return d.toLocaleString('en-US', {
+              month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+          }).reverse();
+
+          const values = item.data.values.reverse();
+          chartData[canvasId] = { labels, values };
+
+          let lastVal = values[values.length - 1];
+          let digits = item.label === 'Pressure' ? 4 : 1;
+          let unit = '';
+          if (item.label === 'Temperature') unit = ' °F';
+          else if (item.label === 'Humidity') unit = ' %';
+          else if (item.label === 'Pressure') unit = ' bar';
+          else if (item.label === 'LightLux') unit = ' lux';
+
+          document.getElementById(baseId + 'Value').textContent =
+            lastVal.toFixed(digits) + unit;
+
+          charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: [...labels],
+              datasets: [{
+                label: item.label,
+                data: [...values],
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                x: {
+                  title: { display: true, text: 'Time' },
+                  ticks: { autoSkip: true, maxTicksLimit: 100 }
+                },
+                y: {
+                  title: {
+                    display: true,
+                    text: unit.trim()
+                  }
+                }
+              }
+            }
+          });
+        });
+
+        const slider = document.getElementById('sharedWindow');
+        const label = document.getElementById('sharedWindowLabel');
+
+        slider.addEventListener('input', () => {
+          const count = parseInt(slider.value);
+          label.textContent = count;
+
+          Object.entries(charts).forEach(([id, chart]) => {
+            const { labels, values } = chartData[id];
+            chart.data.labels = labels.slice(-count);
+            chart.data.datasets[0].data = values.slice(-count);
+            chart.options.scales.x.ticks.maxTicksLimit = count;
+            chart.update();
+          });
+        });
+      });
+  </script>
+</body>
+</html>

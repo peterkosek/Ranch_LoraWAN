@@ -1,0 +1,13 @@
+# This affects access control for clients with no username.
+
+# Allow everyone to read write readwrite to all topics
+
+topic read us915_1/#
+topic write us915_1/#
+topic readwrite us915_1/#
+topic read gateway/#
+topic write gateway/#
+topic readwrite gateway/#
+topic read application/#
+topic write application/#
+topic readwrite application/#
