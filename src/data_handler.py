@@ -82,33 +82,41 @@ def insert_data_into_mysql(dev_eui, timestamp, fport, sensor_values):
         conn = mysql.connector.connect(**MYSQL_CONFIG)
         cursor = conn.cursor()
         if fport == 10:
-            sql = ('''
-                INSERT INTO s1000_data (
-                    devEui, timestamp, airTemp, airHumid, airPresBar, lightLux,
-                    minWindDir, MaxWindDir, avgWindDir,
-                    minWindSp, maxWindSp, avgWindSp,
-                    accRain, accRainDur, rainInten, maxRain,
-                    pm_2_5, pm_10, c02
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ''')
-            values = [
-                dev_eui, timestamp,
-                sensor_values['airTemp'], sensor_values['airHumid'], sensor_values['airPresBar'], sensor_values['lightLux'],
-                sensor_values['minWindDir'], sensor_values['MaxWindDir'], sensor_values['avgWindDir'],
-                sensor_values['minWindSp'], sensor_values['maxWindSp'], sensor_values['avgWindSp'],
-                sensor_values['accRain'], sensor_values['accRainDur'], sensor_values['rainInten'], sensor_values['maxRain'],
-                sensor_values['pm_2_5'], sensor_values['pm_10'], sensor_values['c02']
-            ]
+            try:
+                sql = ('''
+                    INSERT INTO s1000_data (
+                        devEui, timestamp, airTemp, airHumid, airPresBar, lightLux,
+                        minWindDir, MaxWindDir, avgWindDir,
+                        minWindSp, maxWindSp, avgWindSp,
+                        accRain, accRainDur, rainInten, maxRain,
+                        pm_2_5, pm_10, c02
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''')
+                values = [
+                    dev_eui, timestamp,
+                    sensor_values['airTemp'], sensor_values['airHumid'], sensor_values['airPresBar'], sensor_values['lightLux'],
+                    sensor_values['minWindDir'], sensor_values['MaxWindDir'], sensor_values['avgWindDir'],
+                    sensor_values['minWindSp'], sensor_values['maxWindSp'], sensor_values['avgWindSp'],
+                    sensor_values['accRain'], sensor_values['accRainDur'], sensor_values['rainInten'], sensor_values['maxRain'],
+                    sensor_values['pm_2_5'], sensor_values['pm_10'], sensor_values['c02']
+                ]
+                print("✅ Inserting s1000_data:", values)
+            except KeyError as e:
+                print("❌ Missing key in sensor_values:", e)
+                print("sensor_values was:", sensor_values)
+                conn.close()
+                return
         else:
             sql = "INSERT INTO sensor_data (devEui, timestamp, fPort, dataRaw) VALUES (%s, %s, %s, %s)"
             sensor_values_json = json.dumps(sensor_values)
             values = [dev_eui, timestamp, fport, sensor_values_json]
+            print("📝 Inserting generic sensor_data:", values)
 
         cursor.execute(sql, values)
         conn.commit()
         conn.close()
     except mysql.connector.Error as e:
-        print("Error inserting data into MySQL:", e)
+        print("💥 MySQL insert error:", e)
         sys.stdout.flush()
 
 def on_connect(client, userdata, flags, rc):

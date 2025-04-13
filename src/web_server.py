@@ -3,9 +3,11 @@ from flask import Flask, request, jsonify, render_template_string, render_templa
 import mysql.connector
 from datetime import timedelta
 from routes.temp_humid import bp as temp_humid_bp
+from routes.sensor_dashboard import sensor_bp
 
 app = Flask(__name__)
 app.register_blueprint(temp_humid_bp)
+app.register_blueprint(sensor_bp)
 
 # Fetching environment variables from Docker container
 MYSQL_HOST = os.getenv('DB_HOST', 'mysql')  # Defaults to 'mysql' if not set
@@ -20,59 +22,6 @@ MYSQL_CONFIG = {
     'password': MYSQL_PASSWORD,
     'database': MYSQL_DATABASE
 }
-
-@app.route('/temp-humid-rain-page')
-def temp_humid_rain_page():
-    return render_template_string("""
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Charts Debug</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    canvas { margin-bottom: 40px; border: 1px solid #ccc; }
-    .chart-container { max-width: 900px; margin: auto; }
-  </style>
-</head>
-<body>
-  <div class="chart-container">
-    <h1>JS Debug Test</h1>
-    <canvas id="temperatureChart" height="150"></canvas>
-  </div>
-
-  <!-- Move JS here, at the bottom -->
-  <script>
-    console.log("🌟 JS is running at the bottom");
-
-    fetch('/api/temp-humid-rain')
-      .then(res => res.json())
-      .then(data => {
-        console.log("🎯 Got data:", data);
-        const canvas = document.getElementById("temperatureChart");
-        const ctx = canvas.getContext("2d");
-
-        new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: data[0].data.labels,
-            datasets: [{
-              label: data[0].label,
-              data: data[0].data.values,
-              borderColor: 'blue',
-              borderWidth: 2,
-              fill: false,
-              tension: 0.1
-            }]
-          }
-        });
-      })
-      .catch(err => {
-        console.error("❌ Fetch failed:", err);
-      });
-  </script>
-</body>
-</html>
-""")
 
 @app.route('/environmental-page')
 def environmental_page():

@@ -1,0 +1,91 @@
+{% extends "page_template.html" %}
+{% block title %}Multi-Sensor Dashboard{% endblock %}
+
+{% block content %}
+<h2>Multi-Sensor Dashboard</h2>
+
+<!-- Sensor Selector -->
+<form method="get" action="/sensor">
+  <label for="devEui">Select Sensor:</label>
+  <select name="devEui" onchange="this.form.submit()">
+    {% for sensor in sensors %}
+      <option value="{{ sensor.devEui }}" {% if sensor.devEui == selected_dev %}selected{% endif %}>
+        {{ sensor.devDescription or sensor.devEui }}
+      </option>
+    {% endfor %}
+  </select>
+</form>
+
+<!-- Sensor Data Plot -->
+<canvas id="sensorChart"></canvas>
+<p>Upload interval: {{ upld_min }} min</p>
+
+<!-- Lake Level Plot -->
+<h3>Lake Level</h3>
+<canvas id="lakeChart"></canvas>
+<ul>
+  {% for dev, rows in lake_data.items() %}
+    <li>{{ dev }}: upldMin = {{ rows[0].upldMin }}</li>
+  {% endfor %}
+</ul>
+
+<!-- Valve Controller -->
+<h3>Valve Controller</h3>
+<p>Status: {{ current_valve.vlvStatus }}</p>
+<canvas id="valveChart"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Sensor Data Chart
+const sensorCtx = document.getElementById('sensorChart').getContext('2d');
+const sensorChart = new Chart(sensorCtx, {
+  type: 'line',
+  data: {
+    labels: {{ sensor_data | map(attribute='timestamp') | list | tojson }},
+    datasets: [
+      { label: 'Soil Temp CS', data: {{ sensor_data | map(attribute='soilTempCS') | list | tojson }}, borderWidth: 1 },
+      { label: 'Soil Temp CD', data: {{ sensor_data | map(attribute='soilTempCD') | list | tojson }}, borderWidth: 1 },
+      { label: 'Soil Moist S', data: {{ sensor_data | map(attribute='soilMoistS') | list | tojson }}, borderWidth: 1 },
+      { label: 'Soil Moist D', data: {{ sensor_data | map(attribute='soilMoistD') | list | tojson }}, borderWidth: 1 },
+      { label: 'Air Temp C', data: {{ sensor_data | map(attribute='airTempC') | list | tojson }}, borderWidth: 1 },
+      { label: 'Air Moist', data: {{ sensor_data | map(attribute='airMoist') | list | tojson }}, borderWidth: 1 },
+    ]
+  },
+  options: { scales: { x: { type: 'time' }, y: { beginAtZero: false } } }
+});
+
+// Lake Chart
+const lakeCtx = document.getElementById('lakeChart').getContext('2d');
+const lakeChart = new Chart(lakeCtx, {
+  type: 'line',
+  data: {
+    labels: {{ lake_data.values() | list | first | map(attribute='timestamp') | list | tojson }},
+    datasets: [
+      {% for dev, rows in lake_data.items() %}
+      {
+        label: '{{ dev }}',
+        data: {{ rows | map(attribute='lakeLevel') | list | tojson }},
+        borderWidth: 1
+      },
+      {% endfor %}
+    ]
+  },
+  options: { scales: { x: { type: 'time' }, y: { beginAtZero: false } } }
+});
+
+// Valve Chart
+const valveCtx = document.getElementById('valveChart').getContext('2d');
+const valveChart = new Chart(valveCtx, {
+  type: 'line',
+  data: {
+    labels: {{ valve_data | map(attribute='timestamp') | list | tojson }},
+    datasets: [
+      { label: 'Pressure', data: {{ valve_data | map(attribute='hPres') | list | tojson }}, borderWidth: 1 },
+      { label: 'Flow', data: {{ valve_data | map(attribute='hFlow') | list | tojson }}, borderWidth: 1 }
+    ]
+  },
+  options: { scales: { x: { type: 'time' }, y: { beginAtZero: false } } }
+});
+</script>
+
+{% endblock %}
