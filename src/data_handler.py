@@ -27,7 +27,17 @@ def unpack_data(byteDataIn, port):
             dOut.update({'soilMoistS': int.from_bytes(byteDataIn[2:4], 'big') / 10})
             dOut.update({'soilTempCD': int.from_bytes(byteDataIn[4:6], 'big') / 10})
             dOut.update({'soilMoistD': int.from_bytes(byteDataIn[6:8], 'big') / 10})
+        case 2:
+            dOut.update({'hFlow': int.from_bytes(byteDataIn[0:2], 'big') / 10})
+            dOut.update({'hPress': int.from_bytes(byteDataIn[2:4], 'big') / 10})
+            dOut.update({'batPct': int.from_bytes(byteDataIn[4:6], 'big') / 10})
+            dOut.update({'vlvStatus': int.from_bytes(byteDataIn[6:8], 'big') / 10})
         case 5:
+            dOut.update({'soilTempCS': int.from_bytes(byteDataIn[0:2], 'big') / 10})
+            dOut.update({'soilMoistS': int.from_bytes(byteDataIn[2:4], 'big') / 10})
+            dOut.update({'soilTempCD': int.from_bytes(byteDataIn[4:6], 'big') / 10})
+            dOut.update({'soilMoistD': int.from_bytes(byteDataIn[6:8], 'big') / 10})
+        case 6:
             dOut.update({'soilTempCS': int.from_bytes(byteDataIn[0:2], 'big') / 10})
             dOut.update({'soilMoistS': int.from_bytes(byteDataIn[2:4], 'big') / 10})
             dOut.update({'soilTempCD': int.from_bytes(byteDataIn[4:6], 'big') / 10})
@@ -81,6 +91,7 @@ def insert_data_into_mysql(dev_eui, timestamp, fport, sensor_values):
     try:
         conn = mysql.connector.connect(**MYSQL_CONFIG)
         cursor = conn.cursor()
+
         if fport == 10:
             try:
                 sql = ('''
@@ -106,6 +117,23 @@ def insert_data_into_mysql(dev_eui, timestamp, fport, sensor_values):
                 print("sensor_values was:", sensor_values)
                 conn.close()
                 return
+
+        elif fport == 2:
+            sql = ('''
+                INSERT INTO sensor_data (
+                    devEui, timestamp, fPort,
+                    hFlow, hPres, batPct, vlvStatus
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ''')
+            values = [
+                dev_eui, timestamp, fport,
+                sensor_values.get('hFlow'),
+                sensor_values.get('hPress'),
+                sensor_values.get('batPct'),
+                sensor_values.get('vlvStatus')
+            ]
+            print("✅ Inserting valve sensor_data:", values)
+
         else:
             sql = "INSERT INTO sensor_data (devEui, timestamp, fPort, dataRaw) VALUES (%s, %s, %s, %s)"
             sensor_values_json = json.dumps(sensor_values)

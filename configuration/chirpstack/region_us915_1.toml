@@ -170,7 +170,7 @@
     rx_window=0
 
     # RX1 delay (1 - 15 seconds).
-    rx1_delay=1
+    rx1_delay=5
 
     # RX1 data-rate offset
     rx1_dr_offset=0
